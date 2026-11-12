@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="ta">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>தமிழ் செய்தி வாசிப்பு</title>
+<meta name="description" content="இன்றைய முக்கிய செய்திகளை தமிழில் குரலில் கேளுங்கள்">
+<meta name="theme-color" content="#7a1f1f">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icon.svg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+Tamil:wght@400;600;700&display=swap">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<main id="home" class="screen">
+  <header class="top">
+    <h1>இன்றைய செய்திகள்</h1>
+    <p id="updated" class="muted">செய்திகள் ஏற்றப்படுகின்றன…</p>
+  </header>
+
+  <h2 class="label">நாளிதழைத் தேர்ந்தெடுக்கவும்</h2>
+  <div id="papers" class="papers"></div>
+
+  <section class="settings">
+    <label for="city" class="label">உங்கள் நகரம்</label>
+    <select id="city"></select>
+    <label for="speed" class="label">வாசிப்பு வேகம்</label>
+    <select id="speed">
+      <option value="0.85">மெதுவாக</option>
+      <option value="1" selected>சாதாரணம்</option>
+      <option value="1.15">வேகமாக</option>
+    </select>
+  </section>
+</main>
+
+<main id="reader" class="screen" hidden>
+  <header class="bar">
+    <button id="back" class="btn ghost" aria-label="முகப்பு">← முகப்பு</button>
+    <span id="paperName" class="paper-name"></span>
+  </header>
+
+  <div class="now">
+    <p id="sectionName" class="section-name"></p>
+    <p id="counter" class="muted"></p>
+    <p id="headline" class="headline"></p>
+  </div>
+
+  <div class="controls">
+    <button id="prev" class="btn round" aria-label="முந்தைய செய்தி">⏮</button>
+    <button id="play" class="btn round big" aria-label="இயக்கு / நிறுத்து">▶</button>
+    <button id="next" class="btn round" aria-label="அடுத்த செய்தி">⏭</button>
+  </div>
+  <button id="nextSection" class="btn wide">அடுத்த பகுதி ⏭</button>
+
+  <h2 class="label">பகுதிகள்</h2>
+  <div id="sections" class="sections"></div>
+</main>
+
+<p id="voiceWarn" class="warn" hidden></p>
+<audio id="audio" preload="auto"></audio>
+<script src="app.js"></script>
+</body>
+</html>

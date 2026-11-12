@@ -1,0 +1,83 @@
+name: Fetch news and deploy
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+  schedule:
+    # Times are UTC. 00:30 UTC = 6:00 AM IST, then roughly every 3 hours.
+    - cron: "30 0,3,6,9,12,15 * * *"
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+  actions: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install
+        run: pip install -r requirements.txt
+
+      - name: Reuse yesterday's audio clips
+        uses: actions/cache@v4
+        with:
+          path: site/data/audio
+          key: audio-${{ github.run_id }}
+          restore-keys: audio-
+
+      - name: Fetch news and record Tamil audio
+        run: python scripts/build.py
+
+      - name: Drop old audio not used today
+        run: |
+          python - <<'EOF'
+          import json, os
+          d = json.load(open("site/data/news.json", encoding="utf-8"))
+          keep = set(d["audio"].values())
+          folder = "site/data/audio"
+          for f in os.listdir(folder):
+              if f not in keep:
+                  os.remove(os.path.join(folder, f))
+          print("audio files:", len(os.listdir(folder)))
+          EOF
+
+      - uses: actions/configure-pages@v5
+        with:
+          enablement: true
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+
+      # GitHub pauses scheduled workflows after 60 days without commits.
+      # Re-enabling this workflow on each run keeps the daily news updating.
+      - name: Keep schedule alive
+        if: github.event_name == 'schedule'
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh api -X PUT "repos/${{ github.repository }}/actions/workflows/deploy.yml/enable"
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
