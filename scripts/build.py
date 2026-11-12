@@ -94,6 +94,14 @@ def clean_title(entry):
     elif " - " in title:
         title = title.rsplit(" - ", 1)[0]
     title = re.sub(r"\s+", " ", title).strip(" |-")
+    # Section/listing pages and video titles look like "A | B | C | 8 AM"; skip them.
+    if title.count("|") >= 2:
+        return ""
+    if "|" in title:
+        title = max(title.split("|"), key=len).strip()
+    latin = len(re.findall(r"[A-Za-z]", title))
+    if latin > 0.3 * max(len(title), 1) or len(title) < 15:
+        return ""
     return title
 
 
