@@ -98,7 +98,7 @@ def clean_title(entry):
     if title.count("|") >= 2:
         return ""
     if "|" in title:
-        title = max(title.split("|"), key=len).strip()
+        title = re.sub(r"\s*\|\s*", ", ", title)
     latin = len(re.findall(r"[A-Za-z]", title))
     if latin > 0.3 * max(len(title), 1) or len(title) < 15:
         return ""
