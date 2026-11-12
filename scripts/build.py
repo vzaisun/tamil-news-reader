@@ -142,31 +142,59 @@ def fetch_paper(paper):
 
 
 def audio_name(text):
-    return hashlib.sha1((VOICE + text).encode()).hexdigest()[:16] + ".mp3"
+    return hashlib.sha1((text).encode()).hexdigest()[:16] + ".mp3"
+
+
+async def edge_save(text, path):
+    import edge_tts
+    await edge_tts.Communicate(text, VOICE, rate="-10%").save(path)
+
+
+async def gtts_save(text, path):
+    from gtts import gTTS
+    await asyncio.to_thread(lambda: gTTS(text, lang="ta", tld="co.in").save(path))
 
 
 async def tts_all(texts):
-    import edge_tts
-
+    """Record every phrase. Prefer Microsoft's neural Tamil voice; if that
+    service refuses us, fall back to Google's Tamil voice."""
     os.makedirs(AUDIO_DIR, exist_ok=True)
-    sem = asyncio.Semaphore(6)
+    texts = list(texts)
+    engines = [("edge", edge_save), ("google", gtts_save)]
+    engine = None
+    for name, fn in engines:
+        probe = os.path.join(AUDIO_DIR, "_probe.mp3")
+        try:
+            await asyncio.wait_for(fn("வணக்கம்", probe), 30)
+            if os.path.getsize(probe) > 0:
+                engine = (name, fn)
+                os.remove(probe)
+                break
+        except Exception as e:  # noqa: BLE001
+            print(f"  {name} voice unavailable: {e}", file=sys.stderr)
+    if not engine:
+        print("No voice service available; the site will use the phone's voice.")
+        return {}
+    name, fn = engine
+    print(f"recording with {name} voice")
+    sem = asyncio.Semaphore(6 if name == "edge" else 3)
     ok = {}
 
     async def one(text):
-        name = audio_name(text)
-        path = os.path.join(AUDIO_DIR, name)
+        fname = audio_name(text)
+        path = os.path.join(AUDIO_DIR, fname)
+        if os.path.exists(path) and os.path.getsize(path) > 0:
+            ok[text] = fname
+            return
         async with sem:
-            if os.path.exists(path) and os.path.getsize(path) > 0:
-                ok[text] = name
-                return
             for attempt in range(3):
                 try:
-                    await edge_tts.Communicate(text, VOICE, rate="-10%").save(path)
+                    await asyncio.wait_for(fn(text, path), 60)
                     if os.path.getsize(path) > 0:
-                        ok[text] = name
+                        ok[text] = fname
                         return
                 except Exception as e:  # noqa: BLE001
-                    print(f"  tts retry {attempt}: {e}", file=sys.stderr)
+                    print(f"  tts retry {attempt}: {str(e)[:120]}", file=sys.stderr)
                     await asyncio.sleep(2 * (attempt + 1))
 
     await asyncio.gather(*(one(t) for t in texts))
